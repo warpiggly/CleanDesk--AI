@@ -1,11 +1,13 @@
 import os
 import re
+import psutil
 def main_menu():
     while True:
         print("Menú Principal")
         print("1. Opción: Opcion Uno Renombrar Archivos")
         print("2. Opción: Opcion Dos Renombrar Archivos")
-        print("3. Fin del Programa")
+        print("3. ver que archhivos esta utilizando una carpeta")
+        print("4. Fin del Programa")
         
         choice = input("Por favor, elija una opción (1-4): ")
         
@@ -67,7 +69,43 @@ def main_menu():
             folder_path = input("Ingrese Aqui La ruta de la carpeta:")
             reorder_files(folder_path)
             
-        elif choice == 3:
+            
+        elif choice == "3":
+            def obtener_archivos_en_uso(ruta_carpeta):
+                archivos_en_uso = []
+                
+                for raiz, dirs, archivos in os.walk(ruta_carpeta):
+                    for archivo in archivos:
+                        ruta_completa = os.path.join(raiz, archivo)
+                        
+                        for proc in psutil.process_iter(['pid', 'name', 'open_files']):
+                            try:
+                                archivos_abiertos = proc.open_files()
+                                if any(f.path == ruta_completa for f in archivos_abiertos):
+                                    archivos_en_uso.append((ruta_completa, proc.name()))
+                            except (psutil.AccessDenied, psutil.NoSuchProcess, AttributeError):
+                                # Ignorar procesos a los que no podemos acceder
+                                continue
+                
+                return archivos_en_uso
+            
+            ruta_carpeta = input("Ingrese la ruta de la carpeta a analizar: ")
+            if not os.path.isdir(ruta_carpeta):
+                print("La ruta proporcionada no es una carpeta válida.")
+            else:
+                print("Analizando archivos en uso...")
+                archivos_utilizados = obtener_archivos_en_uso(ruta_carpeta)
+
+                if not archivos_utilizados:
+                    print("No se encontraron archivos en uso en la carpeta especificada.")
+                else:
+                    print("\nArchivos en uso:")
+                    for archivo, proceso in archivos_utilizados:
+                        print(f"Archivo: {archivo}")
+                        print(f"Proceso: {proceso}")
+                        print("---")
+            
+        elif choice == 4:
             print("Saliendo de el programa.")
             break
         
