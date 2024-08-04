@@ -5,7 +5,7 @@ def main_menu():
     while True:
         print("Menú Principal")
         print("1. Opción: Opcion Uno Renombrar Archivos")
-        print("2. Opción: Opcion Dos Renombrar Archivos")
+        print("2. Opción: Opcion Dos Rellenar Archivos")
         print("3. ver que archhivos esta utilizando una carpeta")
         print("4. Fin del Programa")
         
@@ -71,41 +71,36 @@ def main_menu():
             
             
         elif choice == "3":
-            def obtener_archivos_en_uso(ruta_carpeta):
-                archivos_en_uso = []
+            def archivos_en_uso(directorio):
+                archivos_y_procesos = []
+                procesos = psutil.process_iter(['pid', 'name', 'open_files'])
                 
-                for raiz, dirs, archivos in os.walk(ruta_carpeta):
-                    for archivo in archivos:
-                        ruta_completa = os.path.join(raiz, archivo)
-                        
-                        for proc in psutil.process_iter(['pid', 'name', 'open_files']):
-                            try:
-                                archivos_abiertos = proc.open_files()
-                                if any(f.path == ruta_completa for f in archivos_abiertos):
-                                    archivos_en_uso.append((ruta_completa, proc.name()))
-                            except (psutil.AccessDenied, psutil.NoSuchProcess, AttributeError):
-                                # Ignorar procesos a los que no podemos acceder
-                                continue
-                
-                return archivos_en_uso
-            
-            ruta_carpeta = input("Ingrese la ruta de la carpeta a analizar: ")
-            if not os.path.isdir(ruta_carpeta):
-                print("La ruta proporcionada no es una carpeta válida.")
-            else:
-                print("Analizando archivos en uso...")
-                archivos_utilizados = obtener_archivos_en_uso(ruta_carpeta)
+                # Listar todos los archivos en la carpeta
+                archivos_en_directorio = {os.path.join(root, file) for root, dirs, files in os.walk(directorio) for file in files}
 
-                if not archivos_utilizados:
-                    print("No se encontraron archivos en uso en la carpeta especificada.")
-                else:
-                    print("\nArchivos en uso:")
-                    for archivo, proceso in archivos_utilizados:
-                        print(f"Archivo: {archivo}")
-                        print(f"Proceso: {proceso}")
-                        print("---")
-            
-        elif choice == 4:
+                for proceso in procesos:
+                    try:
+                        archivos_abiertos = proceso.info['open_files']
+                        if archivos_abiertos:
+                            for archivo in archivos_abiertos:
+                                if archivo.path in archivos_en_directorio:
+                                    archivos_y_procesos.append((archivo.path, proceso.info['name']))
+                    except (psutil.AccessDenied, psutil.NoSuchProcess):
+                        continue
+                
+                return archivos_y_procesos
+
+            directorio = input ("Pon la direccion que quieras analizar:")
+            archivos_y_procesos = archivos_en_uso(directorio)
+
+            if archivos_y_procesos:
+                print("Archivos en uso en la carpeta y los programas que los están utilizando:")
+                for archivo, proceso in archivos_y_procesos:
+                    print(f"{archivo} - Utilizado por: {proceso}")
+            else:
+                print("No hay archivos en uso en la carpeta.")
+                        
+        elif choice == "4":
             print("Saliendo de el programa.")
             break
         
